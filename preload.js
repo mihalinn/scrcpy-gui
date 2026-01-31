@@ -9,6 +9,9 @@ contextBridge.exposeInMainWorld('api', {
     stopScrcpy: () => ipcRenderer.invoke('stop-scrcpy'),
     isScrcpyRunning: () => ipcRenderer.invoke('is-scrcpy-running'),
 
+    // キー入力
+    sendKeyEvent: (serial, keycode) => ipcRenderer.invoke('adb-key-event', { serial, keycode }),
+
     // ADB関連
     getDevices: () => ipcRenderer.invoke('get-devices'),
     connectTcpip: (ip, port) => ipcRenderer.invoke('connect-tcpip', ip, port),

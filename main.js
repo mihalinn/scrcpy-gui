@@ -88,6 +88,21 @@ ipcMain.handle('check-scrcpy', async () => {
   return checkScrcpyExists();
 });
 
+// キーイベント送信
+ipcMain.handle('adb-key-event', async (event, { serial, keycode }) => {
+  try {
+    const adb = getAdbPath();
+    const target = serial ? ['-s', serial] : [];
+
+    // adb shell input keyevent <keycode>
+    execFile(adb, [...target, 'shell', 'input', 'keyevent', keycode]);
+    return { success: true };
+  } catch (error) {
+    console.error('Key event error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // scrcpyのダウンロード
 ipcMain.handle('download-scrcpy', async (event) => {
   const scrcpyVersion = 'v3.1';

@@ -83,6 +83,11 @@ function setupEventListeners() {
     startBtn.addEventListener('click', startScrcpy);
     stopBtn.addEventListener('click', stopScrcpy);
 
+    // Navigation buttons
+    document.getElementById('nav-back').addEventListener('click', () => sendKey(4)); // KEYCODE_BACK
+    document.getElementById('nav-home').addEventListener('click', () => sendKey(3)); // KEYCODE_HOME
+    document.getElementById('nav-app-switch').addEventListener('click', () => sendKey(187)); // KEYCODE_APP_SWITCH
+
     // Record file selection
     document.getElementById('select-record-path-btn').addEventListener('click', async () => {
         const path = await window.api.selectRecordFile();
@@ -487,6 +492,18 @@ async function downloadScrcpy() {
         setupDownloadBtn.style.display = 'inline-flex';
         setupProgress.style.display = 'none';
     }
+}
+
+async function sendKey(keycode) {
+    if (!selectedDevice && !document.getElementById('otg-mode').checked) {
+        addLog('操作するデバイスを選択してください', 'error');
+        return;
+    }
+
+    // OTGモードの場合はadbキーイベントは送れないが、scrcpy起動中なら送れるかも知れない
+    // 基本はシリアル指定
+    const serial = selectedDevice ? selectedDevice.serial : null;
+    await window.api.sendKeyEvent(serial, keycode);
 }
 
 // ========================================
