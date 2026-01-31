@@ -1,3 +1,6 @@
+aiに適当に作らせた
+
+
 # ScrcpyGUI
 
 <p align="center">
