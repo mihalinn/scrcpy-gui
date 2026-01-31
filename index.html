@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com;">
+  <title>ScrcpyGUI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- セットアップ画面 -->
+  <div id="setup-screen" class="screen">
+    <div class="setup-container">
+      <div class="setup-icon">📱</div>
+      <h1>ScrcpyGUI</h1>
+      <p class="setup-subtitle">scrcpyをGUIで操作</p>
+      
+      <div id="setup-status" class="setup-status">
+        <div class="spinner"></div>
+        <span>初期化中...</span>
+      </div>
+      
+      <div id="setup-progress" class="setup-progress" style="display: none;">
+        <div class="progress-bar">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <span id="progress-text">0%</span>
+      </div>
+      
+      <button id="setup-download-btn" class="btn btn-primary" style="display: none;">
+        scrcpyをダウンロード
+      </button>
+    </div>
+  </div>
+
+  <!-- メイン画面 -->
+  <div id="main-screen" class="screen" style="display: none;">
+    <!-- ヘッダー -->
+    <header class="header">
+      <div class="header-left">
+        <h1 class="logo">ScrcpyGUI</h1>
+      </div>
+      <div class="header-right">
+        <button id="start-btn" class="btn btn-success">
+          <span class="btn-icon">▶</span>
+          開始
+        </button>
+        <button id="stop-btn" class="btn btn-danger" style="display: none;">
+          <span class="btn-icon">■</span>
+          停止
+        </button>
+      </div>
+    </header>
+
+    <!-- メインコンテンツ -->
+    <div class="main-content">
+      <!-- サイドバー（タブ） -->
+      <nav class="sidebar">
+        <ul class="nav-tabs">
+          <li class="nav-item active" data-tab="device">
+            <span class="nav-icon">📱</span>
+            <span class="nav-text">デバイス</span>
+          </li>
+          <li class="nav-item" data-tab="video">
+            <span class="nav-icon">🎬</span>
+            <span class="nav-text">ビデオ</span>
+          </li>
+          <li class="nav-item" data-tab="audio">
+            <span class="nav-icon">🔊</span>
+            <span class="nav-text">オーディオ</span>
+          </li>
+          <li class="nav-item" data-tab="record">
+            <span class="nav-icon">📹</span>
+            <span class="nav-text">録画</span>
+          </li>
+          <li class="nav-item" data-tab="camera">
+            <span class="nav-icon">📷</span>
+            <span class="nav-text">カメラ</span>
+          </li>
+          <li class="nav-item" data-tab="window">
+            <span class="nav-icon">🖼️</span>
+            <span class="nav-text">ウィンドウ</span>
+          </li>
+          <li class="nav-item" data-tab="control">
+            <span class="nav-icon">🎮</span>
+            <span class="nav-text">コントロール</span>
+          </li>
+          <li class="nav-item" data-tab="device-options">
+            <span class="nav-icon">⚙️</span>
+            <span class="nav-text">デバイス設定</span>
+          </li>
+          <li class="nav-item" data-tab="virtual-display">
+            <span class="nav-icon">🖥️</span>
+            <span class="nav-text">仮想ディスプレイ</span>
+          </li>
+        </ul>
+      </nav>
+
+      <!-- 設定パネル -->
+      <div class="settings-panel">
+        <!-- デバイスタブ -->
+        <div class="tab-content active" id="tab-device">
+          <h2 class="section-title">デバイス接続</h2>
+          
+          <div class="card">
+            <div class="card-header">
+              <h3>接続中のデバイス</h3>
+              <button id="refresh-devices-btn" class="btn btn-small">更新</button>
+            </div>
+            <div class="card-body">
+              <div id="device-list" class="device-list">
+                <div class="device-placeholder">デバイスを検索中...</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>TCP/IP接続（ワイヤレス）</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label>IPアドレス</label>
+                <input type="text" id="tcpip-ip" placeholder="192.168.1.xxx">
+              </div>
+              <div class="form-group" style="width: 100px;">
+                <label>ポート</label>
+                <input type="number" id="tcpip-port" value="5555">
+              </div>
+              <button id="tcpip-connect-btn" class="btn btn-primary">接続</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>接続オプション</h3>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="otg-mode">
+                <span>OTGモード（USBデバッグなしで操作）</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- ビデオタブ -->
+        <div class="tab-content" id="tab-video">
+          <h2 class="section-title">ビデオ設定</h2>
+          
+          <div class="card">
+            <h3>ソース</h3>
+            <div class="form-group">
+              <label>ビデオソース</label>
+              <select id="video-source">
+                <option value="display">画面（デフォルト）</option>
+                <option value="camera">カメラ</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>品質設定</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label>最大サイズ（幅/高さ）</label>
+                <select id="max-size">
+                  <option value="">自動</option>
+                  <option value="2560">2560</option>
+                  <option value="1920">1920</option>
+                  <option value="1280">1280</option>
+                  <option value="1024">1024</option>
+                  <option value="800">800</option>
+                  <option value="640">640</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>ビットレート</label>
+                <select id="video-bitrate">
+                  <option value="">8M（デフォルト）</option>
+                  <option value="2M">2M（低品質）</option>
+                  <option value="4M">4M</option>
+                  <option value="8M">8M（標準）</option>
+                  <option value="16M">16M（高品質）</option>
+                  <option value="32M">32M（最高品質）</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>最大フレームレート</label>
+                <select id="max-fps">
+                  <option value="">制限なし</option>
+                  <option value="15">15 fps</option>
+                  <option value="30">30 fps</option>
+                  <option value="60">60 fps</option>
+                  <option value="120">120 fps</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>コーデック</label>
+                <select id="video-codec">
+                  <option value="h264">H.264（デフォルト）</option>
+                  <option value="h265">H.265（高品質）</option>
+                  <option value="av1">AV1</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>向き・回転</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label>キャプチャ向き</label>
+                <select id="capture-orientation">
+                  <option value="">自動</option>
+                  <option value="0">0°（標準）</option>
+                  <option value="90">90°（時計回り）</option>
+                  <option value="180">180°</option>
+                  <option value="270">270°</option>
+                  <option value="@">ロック（初期向き）</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>表示向き</label>
+                <select id="orientation">
+                  <option value="">自動</option>
+                  <option value="0">0°</option>
+                  <option value="90">90°</option>
+                  <option value="180">180°</option>
+                  <option value="270">270°</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>角度（カスタム回転）</label>
+              <input type="number" id="angle" min="0" max="360" placeholder="0-360">
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>クロップ（部分表示）</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label>幅</label>
+                <input type="number" id="crop-width" placeholder="幅">
+              </div>
+              <div class="form-group">
+                <label>高さ</label>
+                <input type="number" id="crop-height" placeholder="高さ">
+              </div>
+              <div class="form-group">
+                <label>X</label>
+                <input type="number" id="crop-x" placeholder="X">
+              </div>
+              <div class="form-group">
+                <label>Y</label>
+                <input type="number" id="crop-y" placeholder="Y">
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>ディスプレイ選択</h3>
+            <div class="form-group">
+              <label>ディスプレイID</label>
+              <input type="number" id="display-id" placeholder="0（デフォルト）">
+            </div>
+            <button id="list-displays-btn" class="btn btn-small">ディスプレイ一覧</button>
+          </div>
+
+          <div class="card">
+            <h3>その他</h3>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="no-video">
+                <span>ビデオを無効化（オーディオのみ）</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- オーディオタブ -->
+        <div class="tab-content" id="tab-audio">
+          <h2 class="section-title">オーディオ設定</h2>
+          
+          <div class="card">
+            <h3>オーディオ</h3>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="no-audio">
+                <span>オーディオを無効化</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>ソース</h3>
+            <div class="form-group">
+              <label>オーディオソース</label>
+              <select id="audio-source">
+                <option value="">自動</option>
+                <option value="output">デバイス出力</option>
+                <option value="mic">マイク</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>品質設定</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label>コーデック</label>
+                <select id="audio-codec">
+                  <option value="opus">Opus（デフォルト）</option>
+                  <option value="aac">AAC</option>
+                  <option value="flac">FLAC</option>
+                  <option value="raw">RAW（無圧縮）</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>ビットレート</label>
+                <select id="audio-bitrate">
+                  <option value="">128K（デフォルト）</option>
+                  <option value="64K">64K</option>
+                  <option value="128K">128K</option>
+                  <option value="192K">192K</option>
+                  <option value="320K">320K</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="info-box">
+            <p>ℹ️ オーディオ転送はAndroid 11以上で利用可能です。Android 11では画面がアンロックされている必要があります。</p>
+          </div>
+        </div>
+
+        <!-- 録画タブ -->
+        <div class="tab-content" id="tab-record">
+          <h2 class="section-title">録画設定</h2>
+          
+          <div class="card">
+            <h3>録画</h3>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="enable-record">
+                <span>録画を有効化</span>
+              </label>
+            </div>
+            <div class="form-group">
+              <label>保存先</label>
+              <div class="input-with-button">
+                <input type="text" id="record-path" placeholder="ファイルパスを選択" readonly>
+                <button id="select-record-path-btn" class="btn btn-small">参照</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>フォーマット</label>
+              <select id="record-format">
+                <option value="mp4">MP4</option>
+                <option value="mkv">MKV</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>時間制限</h3>
+            <div class="form-group">
+              <label>録画時間（秒）</label>
+              <input type="number" id="time-limit" placeholder="無制限">
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>バックグラウンド録画</h3>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="no-playback">
+                <span>再生を無効化（録画のみ）</span>
+              </label>
+            </div>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="no-window">
+                <span>ウィンドウを非表示</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- カメラタブ -->
+        <div class="tab-content" id="tab-camera">
+          <h2 class="section-title">カメラ設定</h2>
+          
+          <div class="card">
+            <h3>カメラ選択</h3>
+            <div class="form-group">
+              <label>カメラID</label>
+              <input type="number" id="camera-id" placeholder="自動">
+            </div>
+            <div class="form-group">
+              <label>カメラ方向</label>
+              <select id="camera-facing">
+                <option value="">自動</option>
+                <option value="front">フロントカメラ</option>
+                <option value="back">バックカメラ</option>
+                <option value="external">外部カメラ</option>
+              </select>
+            </div>
+            <button id="list-cameras-btn" class="btn btn-small">カメラ一覧</button>
+          </div>
+
+          <div class="card">
+            <h3>解像度</h3>
+            <div class="form-group">
+              <label>カメラサイズ</label>
+              <input type="text" id="camera-size" placeholder="例: 1920x1080">
+            </div>
+          </div>
+
+          <div class="info-box">
+            <p>ℹ️ カメラミラーリングはAndroid 12以上で利用可能です。ビデオソースを「カメラ」に設定してください。</p>
+          </div>
+        </div>
+
+        <!-- ウィンドウタブ -->
+        <div class="tab-content" id="tab-window">
+          <h2 class="section-title">ウィンドウ設定</h2>
+          
+          <div class="card">
+            <h3>タイトル</h3>
+            <div class="form-group">
+              <label>ウィンドウタイトル</label>
+              <input type="text" id="window-title" placeholder="デバイス名（デフォルト）">
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>位置・サイズ</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label>X位置</label>
+                <input type="number" id="window-x" placeholder="自動">
+              </div>
+              <div class="form-group">
+                <label>Y位置</label>
+                <input type="number" id="window-y" placeholder="自動">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>幅</label>
+                <input type="number" id="window-width" placeholder="自動">
+              </div>
+              <div class="form-group">
+                <label>高さ</label>
+                <input type="number" id="window-height" placeholder="自動">
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>表示オプション</h3>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="window-borderless">
+                <span>ボーダーレス（枠なし）</span>
+              </label>
+            </div>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="always-on-top">
+                <span>常に最前面</span>
+              </label>
+            </div>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="fullscreen">
+                <span>フルスクリーン</span>
+              </label>
+            </div>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="disable-screensaver">
+                <span>スクリーンセーバー無効化</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- コントロールタブ -->
+        <div class="tab-content" id="tab-control">
+          <h2 class="section-title">コントロール設定</h2>
+          
+          <div class="card">
+            <h3>基本設定</h3>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="no-control">
+                <span>読み取り専用（操作無効）</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>入力モード</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label>キーボード</label>
+                <select id="keyboard-mode">
+                  <option value="">SDK（デフォルト）</option>
+                  <option value="uhid">UHID（物理キーボード）</option>
+                  <option value="aoa">AOA（USB）</option>
+                  <option value="disabled">無効</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>マウス</label>
+                <select id="mouse-mode">
+                  <option value="">SDK（デフォルト）</option>
+                  <option value="uhid">UHID（物理マウス）</option>
+                  <option value="aoa">AOA（USB）</option>
+                  <option value="disabled">無効</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>ゲームパッド</label>
+              <select id="gamepad-mode">
+                <option value="">無効（デフォルト）</option>
+                <option value="uhid">UHID</option>
+                <option value="aoa">AOA（USB）</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>クリップボード</h3>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="no-clipboard-autosync">
+                <span>クリップボード自動同期を無効化</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- デバイス設定タブ -->
+        <div class="tab-content" id="tab-device-options">
+          <h2 class="section-title">デバイス設定</h2>
+          
+          <div class="card">
+            <h3>画面</h3>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="turn-screen-off">
+                <span>ミラーリング開始時に画面をオフ</span>
+              </label>
+            </div>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="stay-awake">
+                <span>スリープを防止</span>
+              </label>
+            </div>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="show-touches">
+                <span>タッチを表示</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>電源</h3>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="power-off-on-close">
+                <span>終了時に画面をオフ</span>
+              </label>
+            </div>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="no-power-on">
+                <span>起動時に画面をオンにしない</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>アプリ起動</h3>
+            <div class="form-group">
+              <label>起動するアプリ（パッケージ名）</label>
+              <input type="text" id="start-app" placeholder="例: org.mozilla.firefox">
+            </div>
+            <button id="list-apps-btn" class="btn btn-small">アプリ一覧</button>
+          </div>
+        </div>
+
+        <!-- 仮想ディスプレイタブ -->
+        <div class="tab-content" id="tab-virtual-display">
+          <h2 class="section-title">仮想ディスプレイ</h2>
+          
+          <div class="card">
+            <h3>新規仮想ディスプレイ</h3>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="enable-new-display">
+                <span>仮想ディスプレイを作成</span>
+              </label>
+            </div>
+            <div class="form-group">
+              <label>サイズ（幅x高さ/DPI）</label>
+              <input type="text" id="new-display" placeholder="例: 1920x1080/420">
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>オプション</h3>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="no-vd-system-decorations">
+                <span>システム装飾を非表示</span>
+              </label>
+            </div>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="no-vd-destroy-content">
+                <span>閉じる時にアプリを破棄しない</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="info-box">
+            <p>ℹ️ 仮想ディスプレイは終了時に破棄されます。アプリを起動するには「デバイス設定」タブでアプリを指定してください。</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ログパネル -->
+      <div class="log-panel">
+        <div class="log-header">
+          <h3>ログ</h3>
+          <button id="clear-log-btn" class="btn btn-small">クリア</button>
+        </div>
+        <div id="log-content" class="log-content"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- モーダル -->
+  <div id="modal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-title">タイトル</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <pre id="modal-text"></pre>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/renderer.js"></script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+{
+  "name": "scrcpy-gui",
+  "version": "1.0.0",
+  "description": "scrcpyをGUIで操作するデスクトップアプリ",
+  "main": "main.js",
+  "scripts": {
+    "start": "powershell -Command \"$env:ELECTRON_RUN_AS_NODE=''; & '.\\node_modules\\electron\\dist\\electron.exe' .\"",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "package:win": "electron-packager . ScrcpyGUI --platform=win32 --arch=x64 --out=dist --overwrite --ignore=^/scrcpy$ --ignore=^/dist$",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux"
+  },
+  "keywords": [
+    "scrcpy",
+    "android",
+    "mirror",
+    "screen",
+    "gui",
+    "electron"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1",
+    "electron-packager": "^17.1.2"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.10"
+  },
+  "build": {
+    "appId": "com.scrcpy.gui",
+    "productName": "ScrcpyGUI",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!scrcpy/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "scrcpy",
+        "to": "scrcpy",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": "dir",
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}
