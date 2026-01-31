@@ -347,11 +347,11 @@ function getScrcpyOptions() {
         const recordPath = document.getElementById('record-path').value;
         if (recordPath) {
             options.record = recordPath;
+
+            const recordFormat = document.getElementById('record-format').value;
+            if (recordFormat) options.recordFormat = recordFormat;
         }
     }
-
-    const recordFormat = document.getElementById('record-format').value;
-    if (recordFormat) options.recordFormat = recordFormat;
 
     const timeLimit = document.getElementById('time-limit').value;
     if (timeLimit) options.timeLimit = parseInt(timeLimit);
