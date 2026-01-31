@@ -223,7 +223,6 @@ async function refreshDevices() {
 
         item.innerHTML = `
       <div class="device-info">
-        <span class="device-icon">${device.isWireless ? '📶' : '📱'}</span>
         <div>
           <div class="device-name">${device.model}</div>
           <div class="device-serial">${device.serial}</div>
