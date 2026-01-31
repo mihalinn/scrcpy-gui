@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld('api', {
     getDevices: () => ipcRenderer.invoke('get-devices'),
     connectTcpip: (ip, port) => ipcRenderer.invoke('connect-tcpip', ip, port),
     disconnectTcpip: (address) => ipcRenderer.invoke('disconnect-tcpip', address),
+    runAdbCommand: (args) => ipcRenderer.invoke('run-adb-command', args),
 
     // 情報取得
     listEncoders: () => ipcRenderer.invoke('list-encoders'),

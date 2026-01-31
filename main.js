@@ -237,6 +237,21 @@ ipcMain.handle('get-devices', async () => {
   });
 });
 
+// 任意のADBコマンド実行 (リセット機能用)
+ipcMain.handle('run-adb-command', async (event, args) => {
+  const adbExe = getAdbExe();
+  return new Promise((resolve, reject) => {
+    // argsは文字列として渡される想定
+    exec(`"${adbExe}" ${args}`, (error, stdout, stderr) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve(stdout);
+    });
+  });
+});
+
 // TCP/IP接続
 ipcMain.handle('connect-tcpip', async (event, ip, port = 5555) => {
   const adbExe = getAdbExe();
@@ -585,6 +600,24 @@ function buildScrcpyArgs(options) {
   // OTGモード
   if (options.otg) {
     args.push('--otg');
+  }
+
+  // 新機能・追加オプション (v1.4)
+  if (options.rotationLock) {
+    args.push('--rotation-lock');
+  }
+  if (options.legacyPaste) {
+    args.push('--legacy-paste');
+  }
+  if (options.shortcutMod) {
+    args.push('--shortcut-mod=' + options.shortcutMod);
+  }
+
+  // カスタム引数 (最優先・末尾に追加)
+  if (options.customArgs) {
+    // 簡易的なスペース分割 (引用符などは考慮しない簡易実装)
+    const customArgList = options.customArgs.split(' ').filter(arg => arg.length > 0);
+    args.push(...customArgList);
   }
 
   return args;

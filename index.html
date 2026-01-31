@@ -65,15 +65,16 @@
         <div class="main-content">
             <!-- サイドバー（タブ） -->
             <nav class="sidebar">
+                <div class="nav-section-title">メイン</div>
                 <ul class="nav-tabs">
                     <li class="nav-item active" data-tab="mirroring">
-                        <span class="nav-text">📱 ミラーリング</span>
+                        <span class="nav-text">ミラーリング</span>
                     </li>
                     <li class="nav-item" data-tab="virtual-display">
-                        <span class="nav-text">🖥️ 仮想ディスプレイ</span>
+                        <span class="nav-text">仮想ディスプレイ</span>
                     </li>
                     <li class="nav-item" data-tab="recording">
-                        <span class="nav-text">📹 録画</span>
+                        <span class="nav-text">録画</span>
                     </li>
                 </ul>
             </nav>
@@ -82,39 +83,47 @@
             <div class="settings-panel">
 
                 <!-- ========================================== -->
-                <!-- 1. ミラーリングタブ (通常使用) -->
+                <!-- 1. ミラーリングタブ -->
                 <!-- ========================================== -->
                 <div class="tab-content active" id="tab-mirroring">
                     <h2 class="section-title">ミラーリング設定</h2>
 
-                    <!-- デバイス選択 -->
-                    <div class="card">
-                        <div class="card-header">
-                            <h3>接続デバイス</h3>
-                            <button id="refresh-devices-btn" class="btn btn-small">リスト更新</button>
-                        </div>
-                        <div class="card-body">
-                            <div id="device-list" class="device-list">
-                                <div class="device-placeholder">デバイスを検索中...</div>
-                            </div>
+                    <!-- デバイスリスト -->
+                    <div id="device-list" class="device-list">
+                        <!-- JSで動的に追加 -->
+                        <div class="device-placeholder">デバイスを検索中...</div>
+                    </div>
 
-                            <div style="margin-top: 10px;">
-                                <details>
-                                    <summary style="cursor: pointer; color: var(--accent-color);">ワイヤレス接続 (TCP/IP)
-                                    </summary>
-                                    <div class="form-row" style="margin-top: 10px;">
-                                        <div class="form-group">
-                                            <label>IPアドレス</label>
-                                            <input type="text" id="tcpip-ip" placeholder="例: 192.168.1.10">
-                                        </div>
-                                        <div class="form-group" style="width: 100px;">
-                                            <label>ポート</label>
-                                            <input type="number" id="tcpip-port" value="5555">
-                                        </div>
-                                        <button id="tcpip-connect-btn" class="btn btn-primary">接続</button>
+                    <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
+                        <button id="refresh-devices-btn" class="btn">更新</button>
+                    </div>
+
+                    <!-- リセット機能（ジェスチャー不具合対策） -->
+                    <div class="card" style="border-left: 4px solid var(--warning);">
+                        <h3>トラブルシューティング</h3>
+                        <div class="form-group">
+                            <p class="description-text">接続終了後も「戻る」や「ホーム」が反応しない場合、リセットを試してください。</p>
+                            <button id="reset-device-settings-btn" class="btn btn-warning">デバイス設定を強制リセット</button>
+                        </div>
+                    </div>
+
+                    <!-- 接続設定 -->
+                    <div class="card">
+                        <div style="margin-top: 10px;">
+                            <details>
+                                <summary style="cursor: pointer; color: var(--accent-color);">ワイヤレス接続 (TCP/IP)</summary>
+                                <div class="form-row" style="margin-top: 10px;">
+                                    <div class="form-group">
+                                        <label>IPアドレス</label>
+                                        <input type="text" id="tcpip-ip" placeholder="例: 192.168.1.10">
                                     </div>
-                                </details>
-                            </div>
+                                    <div class="form-group" style="width: 100px;">
+                                        <label>ポート</label>
+                                        <input type="number" id="tcpip-port" value="5555">
+                                    </div>
+                                    <button id="tcpip-connect-btn" class="btn btn-primary">接続</button>
+                                </div>
+                            </details>
                         </div>
                     </div>
 
@@ -159,10 +168,10 @@
                         </div>
                     </div>
 
-                    <!-- 詳細設定 (旧タブの内容をここに集約) -->
+                    <!-- 詳細設定 -->
                     <div class="card">
                         <details>
-                            <summary>詳細設定（オーディオ・カメラ・ウィンドウ他）</summary>
+                            <summary>詳細設定（オーディオ・ウィンドウ・入力・回転）</summary>
                             <div style="padding-top: 15px;">
                                 <h4>オーディオ</h4>
                                 <div class="form-group">
@@ -170,9 +179,34 @@
                                         <input type="checkbox" id="no-audio">
                                         <span>オーディオを無効化</span>
                                     </label>
+                                    <label>オーディオ出力先</label>
+                                    <select id="audio-output-mode">
+                                        <option value="default">デフォルト (PC)</option>
+                                        <option value="device">デバイス本体</option>
+                                    </select>
                                 </div>
 
-                                <h4 style="margin-top: 15px;">ウィンドウ</h4>
+                                <h4 style="margin-top: 15px;">ウィンドウ設定</h4>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>X座標</label>
+                                        <input type="number" id="window-x" placeholder="自動">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Y座標</label>
+                                        <input type="number" id="window-y" placeholder="自動">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>幅</label>
+                                        <input type="number" id="window-width" placeholder="自動">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>高さ</label>
+                                        <input type="number" id="window-height" placeholder="自動">
+                                    </div>
+                                </div>
                                 <div class="form-group">
                                     <label class="checkbox-label">
                                         <input type="checkbox" id="always-on-top">
@@ -182,14 +216,48 @@
                                         <input type="checkbox" id="fullscreen">
                                         <span>全画面で起動</span>
                                     </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="window-borderless">
+                                        <span>ボーダーレス（枠なし）</span>
+                                    </label>
                                 </div>
 
-                                <h4 style="margin-top: 15px;">カメラミラーリング</h4>
+                                <h4 style="margin-top: 15px;">入力・制御</h4>
+                                <div class="form-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="no-control">
+                                        <span>PCからの操作を無効化 (表示のみ)</span>
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="legacy-paste">
+                                        <span>レガシーペースト (文字入力互換モード)</span>
+                                    </label>
+                                </div>
+                                <div class="form-group">
+                                    <label>ショートカットキー修飾子</label>
+                                    <select id="shortcut-mod">
+                                        <option value="lalt,lsuper">Alt (デフォルト)</option>
+                                        <option value="lctrl">Ctrl</option>
+                                        <option value="lsuper">Super(Win)のみ</option>
+                                    </select>
+                                </div>
+
+                                <h4 style="margin-top: 15px;">その他</h4>
                                 <div class="form-group">
                                     <label class="checkbox-label">
                                         <input type="checkbox" id="enable-camera">
                                         <span>カメラをミラーリング</span>
                                     </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="rotation-lock">
+                                        <span>画面回転をロック (現在の向き)</span>
+                                    </label>
+                                </div>
+
+                                <h4 style="margin-top: 15px;">カスタムオプション</h4>
+                                <div class="form-group">
+                                    <label>追加引数 (例: --turn-screen-off --show-touches)</label>
+                                    <input type="text" id="custom-args" placeholder="scrcpyの引数を直接入力...">
                                 </div>
 
                             </div>
@@ -205,7 +273,7 @@
                 </div>
 
                 <!-- ========================================== -->
-                <!-- 2. 仮想ディスプレイタブ (強化) -->
+                <!-- 2. 仮想ディスプレイタブ -->
                 <!-- ========================================== -->
                 <div class="tab-content" id="tab-virtual-display">
                     <h2 class="section-title">仮想ディスプレイ設定</h2>
@@ -213,15 +281,15 @@
                         デバイスの画面とは別の、仮想的なセカンドディスプレイを作成して操作します。</p>
 
                     <div class="card highlight-card" style="border: 2px solid var(--primary-color);">
-                        <h3>🚀 パフォーマンスモード</h3>
+                        <h3>パフォーマンスモード</h3>
                         <div class="form-group">
                             <label>用途に合わせて設定を一括変更</label>
                             <select id="vd-performance-mode" class="large-select"
                                 style="padding: 12px; font-size: 14px;">
-                                <option value="quality">🌟 最高画質 (PC/有線向け) - 2K/120fps/20Mbps</option>
-                                <option value="balance" selected>⚖️ バランス (標準) - FHD/60fps/8Mbps</option>
-                                <option value="speed">⚡ 低遅延 (無線/軽量) - 720p/30fps/4Mbps</option>
-                                <option value="custom">⚙️ 手動設定</option>
+                                <option value="quality">最高画質 (PC/有線向け) - 2K/120fps/20Mbps</option>
+                                <option value="balance" selected>バランス (標準) - FHD/60fps/8Mbps</option>
+                                <option value="speed">低遅延 (無線/軽量) - 720p/30fps/4Mbps</option>
+                                <option value="custom">手動設定</option>
                             </select>
                         </div>
                     </div>
@@ -251,8 +319,33 @@
                     </div>
 
                     <div class="card">
-                        <details>
-                            <summary>高度な設定 (コーデック・バッファ)</summary>
+                        <details open>
+                            <summary>詳細設定（画質・制御・引数）</summary>
+
+                            <!-- 画質設定 (ビットレート・FPS) -->
+                            <div class="form-row" style="margin-top: 10px;">
+                                <div class="form-group">
+                                    <label>ビットレート</label>
+                                    <select id="vd-bit-rate">
+                                        <option value="20M">20 Mbps (高画質)</option>
+                                        <option value="16M">16 Mbps</option>
+                                        <option value="12M">12 Mbps</option>
+                                        <option value="8M" selected>8 Mbps (標準)</option>
+                                        <option value="4M">4 Mbps (軽量)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>最大FPS</label>
+                                    <select id="vd-max-fps">
+                                        <option value="0">制限なし</option>
+                                        <option value="120">120 fps</option>
+                                        <option value="90">90 fps</option>
+                                        <option value="60" selected>60 fps</option>
+                                        <option value="30">30 fps</option>
+                                    </select>
+                                </div>
+                            </div>
+
                             <div class="form-row" style="margin-top: 10px;">
                                 <div class="form-group">
                                     <label>ビデオコーデック</label>
@@ -266,6 +359,23 @@
                                     <label>バッファ (ms)</label>
                                     <input type="number" id="vd-buffer" value="0" placeholder="0 = 低遅延">
                                 </div>
+                            </div>
+
+                            <h4 style="margin-top: 15px;">オーディオ・制御</h4>
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="vd-enable-audio" checked>
+                                    <span>オーディオを転送 (PCから音を出す)</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="vd-enable-control" checked>
+                                    <span>マウス・キーボード操作を有効化</span>
+                                </label>
+                            </div>
+
+                            <div class="form-group">
+                                <label>追加引数</label>
+                                <input type="text" id="vd-custom-args" placeholder="カスタム引数...">
                             </div>
                         </details>
                     </div>

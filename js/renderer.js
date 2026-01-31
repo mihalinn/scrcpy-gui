@@ -96,6 +96,36 @@ function setupEventListeners() {
 
     if (stopBtn) stopBtn.addEventListener('click', stopScrcpy);
 
+    // デバイス設定リセット (ジェスチャー不具合対策)
+    const resetBtn = document.getElementById('reset-device-settings-btn');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', async () => {
+            if (!selectedDevice) {
+                addLog('デバイスが選択されていません', 'error');
+                return;
+            }
+            if (confirm('デバイスの表示設定を強制リセットしますか？\n（ジェスチャーが効かない場合などに有効です）')) {
+                addLog('設定リセットを実行中...', 'info');
+                try {
+                    // ナビゲーションバーの非表示設定などを解除 (Immersive Mode解除)
+                    addLog('表示設定を完全リセット中...', 'info');
+                    const serial = selectedDevice.serial || selectedDevice;
+
+                    // 1. Policy Control (全画面表示などの設定)
+                    await window.api.runAdbCommand(`-s ${serial} shell settings put global policy_control null`);
+
+                    // 2. 解像度と密度 (念のためリセット)
+                    await window.api.runAdbCommand(`-s ${serial} shell wm size reset`);
+                    await window.api.runAdbCommand(`-s ${serial} shell wm density reset`);
+
+                    addLog('完全リセット完了。まだ直らない場合はスマホを再起動してください。', 'success');
+                } catch (err) {
+                    addLog('リセット失敗: ' + err.message, 'error');
+                }
+            }
+        });
+    }
+
     // Navigation buttons
     document.getElementById('nav-back').addEventListener('click', () => sendKey(4)); // KEYCODE_BACK
     document.getElementById('nav-home').addEventListener('click', () => sendKey(3)); // KEYCODE_HOME
@@ -152,23 +182,30 @@ function setupEventListeners() {
 function applyVdPerformancePreset(mode) {
     const codecSelect = document.getElementById('vd-video-codec');
     const bufferInput = document.getElementById('vd-buffer');
-
-    // 注: 解像度などは起動時にモードを見て動的に決定するか、ここで設定する
-    // main.js側でモード名を受け取る形ではなく、ここで具体的なパラメータに展開する方が柔軟
+    const bitRateSelect = document.getElementById('vd-bit-rate');
+    const fpsSelect = document.getElementById('vd-max-fps');
 
     switch (mode) {
         case 'quality': // 最高画質
-            // 下記はUI上の反映だけの例。実際のscrcpyオプションとしては getScrcpyOptions で構築する
             if (codecSelect) codecSelect.value = 'h265';
-            if (bufferInput) bufferInput.value = '50'; // 多少バッファ持たせて安定化
+            if (bufferInput) bufferInput.value = '50';
+            if (bitRateSelect) bitRateSelect.value = '20M';
+            if (fpsSelect) fpsSelect.value = '120';
             break;
         case 'balance': // バランス
-            if (codecSelect) codecSelect.value = 'h264'; // 互換性
+            if (codecSelect) codecSelect.value = 'h264';
             if (bufferInput) bufferInput.value = '0';
+            if (bitRateSelect) bitRateSelect.value = '8M';
+            if (fpsSelect) fpsSelect.value = '60';
             break;
         case 'speed': // 低遅延
             if (codecSelect) codecSelect.value = 'h264';
             if (bufferInput) bufferInput.value = '0';
+            if (bitRateSelect) bitRateSelect.value = '4M';
+            if (fpsSelect) fpsSelect.value = '30';
+            break;
+        case 'custom':
+            // 変更なし
             break;
     }
 
@@ -191,9 +228,23 @@ function setupIpcListeners() {
         addLog(output, 'info');
     });
 
-    window.api.onScrcpyClosed((code) => {
+    window.api.onScrcpyClosed(async (code) => {
         addLog(`scrcpyが終了しました (code: ${code})`, code === 0 ? 'success' : 'error');
         setRunningState(false);
+
+        // 仮想ディスプレイ終了時の自動クリーンアップ
+        if (lastSessionMode === 'virtual-display' && selectedDevice) {
+            addLog('仮想ディスプレイ終了後の自動クリーンアップを実行中...', 'info');
+            try {
+                // policy_controlのリセット (selectedDeviceはオブジェクトなので.serialを使う)
+                const serial = selectedDevice.serial || selectedDevice;
+                await window.api.runAdbCommand(`-s ${serial} shell settings put global policy_control null`);
+                addLog('設定リセット完了。', 'success');
+            } catch (err) {
+                addLog('自動クリーンアップ失敗: ' + err.message, 'warning');
+            }
+        }
+        lastSessionMode = null; // リセット
     });
 
     window.api.onScrcpyError((error) => {
@@ -360,29 +411,16 @@ function getScrcpyOptions(mode = 'mirroring') {
 
         // コアオプション
         options.newDisplay = newDisplayValue;
-        options.startApp = ""; // 仮想ディスプレイでは通常ホーム画面などを出すか、ドロワーを出す
+        options.startApp = "";
 
-        // パフォーマンスプリセットの反映（ビットレート・FPS）
-        switch (perfMode) {
-            case 'quality': // 最高画質
-                options.videoBitRate = '20M';
-                options.maxFps = 120;
-                // コーデックはUI側の初期値としてapply関数で設定されるが、
-                // 送信時はUIの値を正とするためここでは設定しない（下部で取得）
-                break;
-            case 'balance': // バランス
-                options.videoBitRate = '8M';
-                options.maxFps = 60;
-                break;
-            case 'speed': // 低遅延
-                options.videoBitRate = '4M';
-                options.maxFps = 30;
-                break;
-            case 'custom':
-                // 手動設定値を使用（UIがないパラメータはデフォルト or 既存設定）
-                // 必要ならカスタム用のbitrate入力欄を追加するが、今回は簡易モードとしてデフォルト(8M/60fps相当)または指定なし
-                break;
-        }
+        // 詳細設定（UIの値を直接参照）
+        const bitRate = document.getElementById('vd-bit-rate').value;
+        if (bitRate) options.videoBitRate = bitRate;
+
+        const maxFps = document.getElementById('vd-max-fps').value;
+        if (maxFps && maxFps !== '0') options.maxFps = parseInt(maxFps);
+
+        // ※以前の switch (perfMode) { ... } ブロックは削除し、UI優先とする
 
         // コーデック (UI優先)
         const codec = document.getElementById('vd-video-codec').value;
@@ -397,7 +435,17 @@ function getScrcpyOptions(mode = 'mirroring') {
         const vdId = document.getElementById('virtual-display-id').value;
         if (vdId) options.displayId = vdId;
 
-        options.noAudio = true; // 基本は映像のみ（用途によるが）
+        // 新機能: オーディオ・制御
+        if (!document.getElementById('vd-enable-audio').checked) {
+            options.noAudio = true;
+        }
+        if (!document.getElementById('vd-enable-control').checked) {
+            options.noControl = true;
+        }
+
+        // 追加引数
+        const customArgs = document.getElementById('vd-custom-args').value;
+        if (customArgs) options.customArgs = customArgs;
 
     } else {
         // --- 通常ミラーリングモード設定 ---
@@ -423,13 +471,44 @@ function getScrcpyOptions(mode = 'mirroring') {
             options.cameraSize = '1920x1080'; // 簡易設定
         }
 
+        // ウィンドウ設定
+        // 注意: 値が空文字や0の場合は設定しない（回転時の挙動に影響する可能性あり）
+        const winX = document.getElementById('window-x').value;
+        const winY = document.getElementById('window-y').value;
+        const winW = document.getElementById('window-width').value;
+        const winH = document.getElementById('window-height').value;
+
+        if (winX && winX !== '') options.windowX = winX;
+        if (winY && winY !== '') options.windowY = winY;
+        if (winW && winW !== '') options.windowWidth = winW;
+        if (winH && winH !== '') options.windowHeight = winH;
+
+        if (document.getElementById('window-borderless').checked) options.windowBorderless = true;
+        if (document.getElementById('rotation-lock').checked) options.rotationLock = true;
+
+        // 入力・制御
+        if (document.getElementById('no-control').checked) options.noControl = true;
+        if (document.getElementById('legacy-paste').checked) options.legacyPaste = true;
+
+        const shortcutMod = document.getElementById('shortcut-mod').value;
+        if (shortcutMod) options.shortcutMod = shortcutMod;
+
+        // 追加引数
+        const customArgs = document.getElementById('custom-args').value;
+        if (customArgs) options.customArgs = customArgs;
     }
 
     return options;
 }
 
 
+
+// グローバル変数
+let lastSessionMode = null;
+
 async function startScrcpy(mode = 'mirroring') {
+    lastSessionMode = mode;
+
     // 仮想ディスプレイモード以外で、かつOTGモードでない場合はデバイス選択必須
     if (mode !== 'virtual-display' && !selectedDevice && !document.getElementById('otg-mode').checked) {
         addLog('デバイスを選択してください', 'error');
@@ -442,10 +521,11 @@ async function startScrcpy(mode = 'mirroring') {
         return;
     }
 
+    setRunningState(true);
     const options = getScrcpyOptions(mode);
 
     addLog(`scrcpyを起動中 (${mode})...`, 'info');
-    // addLog('オプション: ' + JSON.stringify(options, null, 2), 'info'); // デバッグ用
+    addLog('Starting with options: ' + JSON.stringify(options), 'info'); // デバッグ用ログ出力
 
     const result = await window.api.startScrcpy(options);
 

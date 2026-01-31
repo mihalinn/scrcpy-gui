@@ -1,6 +1,6 @@
 {
   "name": "scrcpy-gui",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "scrcpyをGUIで操作するデスクトップアプリ",
   "main": "main.js",
   "scripts": {
