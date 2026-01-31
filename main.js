@@ -572,6 +572,9 @@ function buildScrcpyArgs(options) {
   if (options.newDisplay) {
     args.push('--new-display=' + options.newDisplay);
   }
+  if (options.displayBuffer) {
+    args.push('--display-buffer=' + options.displayBuffer);
+  }
   if (options.noVdSystemDecorations) {
     args.push('--no-vd-system-decorations');
   }

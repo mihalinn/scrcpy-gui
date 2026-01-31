@@ -787,3 +787,45 @@ select {
         display: none;
     }
 }
+
+/* ========================================
+   New UI Elements
+   ======================================== */
+
+.large-select {
+    padding: var(--space-md);
+    font-size: 16px;
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--accent-primary);
+    font-weight: 500;
+}
+
+.highlight-card {
+    background: rgba(99, 102, 241, 0.05);
+    border: 1px solid var(--accent-primary);
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.1);
+}
+
+.description-text {
+    color: var(--text-secondary);
+    margin-bottom: var(--space-lg);
+    line-height: 1.6;
+}
+
+details>summary {
+    padding: var(--space-sm);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    transition: background var(--transition-fast);
+    font-weight: 500;
+    color: var(--accent-secondary);
+}
+
+details>summary:hover {
+    background: var(--bg-hover);
+}
+
+details[open]>summary {
+    margin-bottom: var(--space-md);
+    border-bottom: 1px solid var(--border-color);
+}

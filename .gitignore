@@ -1,24 +1,8 @@
-# Dependencies
 node_modules/
-
-# Build output
 dist/
-
-# scrcpy binaries (downloaded at runtime)
-scrcpy/
-
-# Logs
-*.log
-npm-debug.log*
-
-# OS files
+dist_*/
 .DS_Store
 Thumbs.db
-
-# IDE
-.vscode/
-.idea/
-
-# Environment
-.env
-.env.local
+*.log
+scrcpy/
+assets/scrcpy-server

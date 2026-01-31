@@ -61,6 +61,10 @@ function showMainScreen() {
 // Event Listeners
 // ========================================
 
+// ========================================
+// Event Listeners
+// ========================================
+
 function setupEventListeners() {
     // Setup screen
     setupDownloadBtn.addEventListener('click', downloadScrcpy);
@@ -80,8 +84,17 @@ function setupEventListeners() {
     document.getElementById('tcpip-connect-btn').addEventListener('click', connectTcpip);
 
     // Start/Stop buttons
-    startBtn.addEventListener('click', startScrcpy);
-    stopBtn.addEventListener('click', stopScrcpy);
+    // Header start button (Legacy/Global - defaults to Mirroring)
+    if (startBtn) startBtn.addEventListener('click', () => startScrcpy('mirroring'));
+
+    // Tab-specific start buttons
+    const startMirroringBtn = document.getElementById('start-mirroring-btn');
+    if (startMirroringBtn) startMirroringBtn.addEventListener('click', () => startScrcpy('mirroring'));
+
+    const startVdBtn = document.getElementById('start-virtual-display-btn');
+    if (startVdBtn) startVdBtn.addEventListener('click', () => startScrcpy('virtual-display'));
+
+    if (stopBtn) stopBtn.addEventListener('click', stopScrcpy);
 
     // Navigation buttons
     document.getElementById('nav-back').addEventListener('click', () => sendKey(4)); // KEYCODE_BACK
@@ -103,17 +116,6 @@ function setupEventListeners() {
         showModal('ディスプレイ一覧', result.output);
     });
 
-    document.getElementById('list-cameras-btn').addEventListener('click', async () => {
-        const result = await window.api.listCameras(selectedDevice?.serial);
-        showModal('カメラ一覧', result.output);
-    });
-
-    document.getElementById('list-apps-btn').addEventListener('click', async () => {
-        addLog('アプリ一覧を取得中...（時間がかかる場合があります）', 'info');
-        const result = await window.api.listApps(selectedDevice?.serial);
-        showModal('アプリ一覧', result.output);
-    });
-
     // Log clear
     clearLogBtn.addEventListener('click', () => {
         logContent.innerHTML = '';
@@ -125,21 +127,52 @@ function setupEventListeners() {
         if (e.target === modal) hideModal();
     });
 
-    // Video source change
-    document.getElementById('video-source').addEventListener('change', (e) => {
-        // カメラ選択時はカメラタブへ誘導
-        if (e.target.value === 'camera') {
-            addLog('カメラモードが選択されました。「カメラ」タブで詳細設定ができます。', 'info');
-        }
-    });
+    // Virtual Display Presets
+    const vdPerformanceMode = document.getElementById('vd-performance-mode');
+    if (vdPerformanceMode) {
+        vdPerformanceMode.addEventListener('change', (e) => {
+            applyVdPerformancePreset(e.target.value);
+        });
+    }
 
-    // Virtual display checkbox
-    document.getElementById('enable-new-display').addEventListener('change', (e) => {
-        const newDisplayInput = document.getElementById('new-display');
-        if (e.target.checked && !newDisplayInput.value) {
-            newDisplayInput.value = '1920x1080';
-        }
-    });
+    const vdResolutionPreset = document.getElementById('vd-resolution-preset');
+    if (vdResolutionPreset) {
+        vdResolutionPreset.addEventListener('change', (e) => {
+            const manualGroup = document.getElementById('vd-manual-resolution-group');
+            if (e.target.value === 'manual') {
+                manualGroup.style.display = 'block';
+            } else {
+                manualGroup.style.display = 'none';
+            }
+        });
+    }
+}
+
+// 仮想ディスプレイのパフォーマンスプリセット適用
+function applyVdPerformancePreset(mode) {
+    const codecSelect = document.getElementById('vd-video-codec');
+    const bufferInput = document.getElementById('vd-buffer');
+
+    // 注: 解像度などは起動時にモードを見て動的に決定するか、ここで設定する
+    // main.js側でモード名を受け取る形ではなく、ここで具体的なパラメータに展開する方が柔軟
+
+    switch (mode) {
+        case 'quality': // 最高画質
+            // 下記はUI上の反映だけの例。実際のscrcpyオプションとしては getScrcpyOptions で構築する
+            if (codecSelect) codecSelect.value = 'h265';
+            if (bufferInput) bufferInput.value = '50'; // 多少バッファ持たせて安定化
+            break;
+        case 'balance': // バランス
+            if (codecSelect) codecSelect.value = 'h264'; // 互換性
+            if (bufferInput) bufferInput.value = '0';
+            break;
+        case 'speed': // 低遅延
+            if (codecSelect) codecSelect.value = 'h264';
+            if (bufferInput) bufferInput.value = '0';
+            break;
+    }
+
+    addLog(`パフォーマンスモードを「${mode}」に変更しました`, 'info');
 }
 
 function setupIpcListeners() {
@@ -285,162 +318,134 @@ async function connectTcpip() {
 // scrcpy Control
 // ========================================
 
-function getScrcpyOptions() {
+/**
+ * 現在のモードに基づいてオプションを収集
+ * @param {string} mode - 'mirroring' | 'virtual-display'
+ */
+function getScrcpyOptions(mode = 'mirroring') {
     const options = {};
 
     // Device selection
     if (selectedDevice) {
         options.serial = selectedDevice.serial;
     }
-    options.otg = document.getElementById('otg-mode').checked;
 
-    // Video settings
-    const videoSource = document.getElementById('video-source').value;
-    if (videoSource && videoSource !== 'display') {
-        options.videoSource = videoSource;
-    }
-
-    const maxSize = document.getElementById('max-size').value;
-    if (maxSize) options.maxSize = parseInt(maxSize);
-
-    const videoBitrate = document.getElementById('video-bitrate').value;
-    if (videoBitrate) options.videoBitRate = videoBitrate;
-
-    const maxFps = document.getElementById('max-fps').value;
-    if (maxFps) options.maxFps = parseInt(maxFps);
-
-    const videoCodec = document.getElementById('video-codec').value;
-    if (videoCodec) options.videoCodec = videoCodec;
-
-    const captureOrientation = document.getElementById('capture-orientation').value;
-    if (captureOrientation) options.captureOrientation = captureOrientation;
-
-    const orientation = document.getElementById('orientation').value;
-    if (orientation) options.orientation = orientation;
-
-    const angle = document.getElementById('angle').value;
-    if (angle) options.angle = angle;
-
-    // Crop
-    const cropWidth = document.getElementById('crop-width').value;
-    const cropHeight = document.getElementById('crop-height').value;
-    const cropX = document.getElementById('crop-x').value;
-    const cropY = document.getElementById('crop-y').value;
-    if (cropWidth && cropHeight) {
-        options.crop = `${cropWidth}:${cropHeight}:${cropX || 0}:${cropY || 0}`;
-    }
-
-    const displayId = document.getElementById('display-id').value;
-    if (displayId) options.displayId = displayId;
-
-    options.noVideo = document.getElementById('no-video').checked;
-
-    // Audio settings
-    options.noAudio = document.getElementById('no-audio').checked;
-
-    const audioSource = document.getElementById('audio-source').value;
-    if (audioSource) options.audioSource = audioSource;
-
-    const audioCodec = document.getElementById('audio-codec').value;
-    if (audioCodec) options.audioCodec = audioCodec;
-
-    const audioBitrate = document.getElementById('audio-bitrate').value;
-    if (audioBitrate) options.audioBitRate = audioBitrate;
-
-    // Recording
+    // 共通設定：録画
     if (document.getElementById('enable-record').checked) {
         const recordPath = document.getElementById('record-path').value;
+        const timeLimit = document.getElementById('time-limit').value;
+
         if (recordPath) {
             options.record = recordPath;
-
             const recordFormat = document.getElementById('record-format').value;
             if (recordFormat) options.recordFormat = recordFormat;
         }
+        if (timeLimit) options.timeLimit = parseInt(timeLimit);
     }
 
-    const timeLimit = document.getElementById('time-limit').value;
-    if (timeLimit) options.timeLimit = parseInt(timeLimit);
+    // モード別設定
+    if (mode === 'virtual-display') {
+        // --- 仮想ディスプレイモード設定 ---
+        const perfMode = document.getElementById('vd-performance-mode').value;
+        const resPreset = document.getElementById('vd-resolution-preset').value;
 
-    options.noPlayback = document.getElementById('no-playback').checked;
-    options.noWindow = document.getElementById('no-window').checked;
+        // 解像度の決定
+        let newDisplayValue = '1920x1080/440'; // デフォルト
 
-    // Camera settings
-    const cameraId = document.getElementById('camera-id').value;
-    if (cameraId) options.cameraId = cameraId;
+        if (resPreset === 'manual') {
+            newDisplayValue = document.getElementById('virtual-display-res').value || newDisplayValue;
+        } else {
+            newDisplayValue = resPreset;
+        }
 
-    const cameraFacing = document.getElementById('camera-facing').value;
-    if (cameraFacing) options.cameraFacing = cameraFacing;
+        // コアオプション
+        options.newDisplay = newDisplayValue;
+        options.startApp = ""; // 仮想ディスプレイでは通常ホーム画面などを出すか、ドロワーを出す
 
-    const cameraSize = document.getElementById('camera-size').value;
-    if (cameraSize) options.cameraSize = cameraSize;
+        // パフォーマンスプリセットの反映（ビットレート・FPS）
+        switch (perfMode) {
+            case 'quality': // 最高画質
+                options.videoBitRate = '20M';
+                options.maxFps = 120;
+                // コーデックはUI側の初期値としてapply関数で設定されるが、
+                // 送信時はUIの値を正とするためここでは設定しない（下部で取得）
+                break;
+            case 'balance': // バランス
+                options.videoBitRate = '8M';
+                options.maxFps = 60;
+                break;
+            case 'speed': // 低遅延
+                options.videoBitRate = '4M';
+                options.maxFps = 30;
+                break;
+            case 'custom':
+                // 手動設定値を使用（UIがないパラメータはデフォルト or 既存設定）
+                // 必要ならカスタム用のbitrate入力欄を追加するが、今回は簡易モードとしてデフォルト(8M/60fps相当)または指定なし
+                break;
+        }
 
-    // Window settings
-    const windowTitle = document.getElementById('window-title').value;
-    if (windowTitle) options.windowTitle = windowTitle;
+        // コーデック (UI優先)
+        const codec = document.getElementById('vd-video-codec').value;
+        if (codec) options.videoCodec = codec;
 
-    const windowX = document.getElementById('window-x').value;
-    if (windowX) options.windowX = parseInt(windowX);
+        // 高度な設定
+        const buffer = document.getElementById('vd-buffer').value;
+        if (buffer && parseInt(buffer) > 0) {
+            options.displayBuffer = parseInt(buffer);
+        }
 
-    const windowY = document.getElementById('window-y').value;
-    if (windowY) options.windowY = parseInt(windowY);
+        const vdId = document.getElementById('virtual-display-id').value;
+        if (vdId) options.displayId = vdId;
 
-    const windowWidth = document.getElementById('window-width').value;
-    if (windowWidth) options.windowWidth = parseInt(windowWidth);
+        options.noAudio = true; // 基本は映像のみ（用途によるが）
 
-    const windowHeight = document.getElementById('window-height').value;
-    if (windowHeight) options.windowHeight = parseInt(windowHeight);
+    } else {
+        // --- 通常ミラーリングモード設定 ---
+        options.otg = document.getElementById('otg-mode').checked;
 
-    options.windowBorderless = document.getElementById('window-borderless').checked;
-    options.alwaysOnTop = document.getElementById('always-on-top').checked;
-    options.fullscreen = document.getElementById('fullscreen').checked;
-    options.disableScreensaver = document.getElementById('disable-screensaver').checked;
+        const maxSize = document.getElementById('max-size').value;
+        if (maxSize && maxSize !== "0") options.maxSize = parseInt(maxSize);
 
-    // Control settings
-    options.noControl = document.getElementById('no-control').checked;
+        const bitRate = document.getElementById('bit-rate').value;
+        if (bitRate) options.videoBitRate = bitRate;
 
-    const keyboardMode = document.getElementById('keyboard-mode').value;
-    if (keyboardMode) options.keyboard = keyboardMode;
+        // 詳細設定
+        options.noAudio = document.getElementById('no-audio').checked;
+        options.stayAwake = document.getElementById('stay-awake').checked;
+        options.turnScreenOff = document.getElementById('turn-screen-off').checked;
+        options.alwaysOnTop = document.getElementById('always-on-top').checked;
+        options.fullscreen = document.getElementById('fullscreen').checked;
+        options.showTouches = false; // デフォルトはオフ
 
-    const mouseMode = document.getElementById('mouse-mode').value;
-    if (mouseMode) options.mouse = mouseMode;
+        // 詳細設定内の値も取得
+        if (document.getElementById('enable-camera').checked) {
+            options.videoSource = 'camera';
+            options.cameraSize = '1920x1080'; // 簡易設定
+        }
 
-    const gamepadMode = document.getElementById('gamepad-mode').value;
-    if (gamepadMode) options.gamepad = gamepadMode;
-
-    options.noClipboardAutosync = document.getElementById('no-clipboard-autosync').checked;
-
-    // Device options
-    options.turnScreenOff = document.getElementById('turn-screen-off').checked;
-    options.stayAwake = document.getElementById('stay-awake').checked;
-    options.showTouches = document.getElementById('show-touches').checked;
-    options.powerOffOnClose = document.getElementById('power-off-on-close').checked;
-    options.noPowerOn = document.getElementById('no-power-on').checked;
-
-    const startApp = document.getElementById('start-app').value;
-    if (startApp) options.startApp = startApp;
-
-    // Virtual display
-    if (document.getElementById('enable-new-display').checked) {
-        const newDisplay = document.getElementById('new-display').value;
-        options.newDisplay = newDisplay || '';
     }
-
-    options.noVdSystemDecorations = document.getElementById('no-vd-system-decorations').checked;
-    options.noVdDestroyContent = document.getElementById('no-vd-destroy-content').checked;
 
     return options;
 }
 
-async function startScrcpy() {
-    if (!selectedDevice && !document.getElementById('otg-mode').checked) {
+
+async function startScrcpy(mode = 'mirroring') {
+    // 仮想ディスプレイモード以外で、かつOTGモードでない場合はデバイス選択必須
+    if (mode !== 'virtual-display' && !selectedDevice && !document.getElementById('otg-mode').checked) {
         addLog('デバイスを選択してください', 'error');
         return;
     }
 
-    const options = getScrcpyOptions();
+    // 仮想ディスプレイモードでもデバイスは必要だが、OTGフラグ等は無視する
+    if (mode === 'virtual-display' && !selectedDevice) {
+        addLog('デバイスを選択してください', 'error');
+        return;
+    }
 
-    addLog('scrcpyを起動中...', 'info');
-    addLog('オプション: ' + JSON.stringify(options, null, 2), 'info');
+    const options = getScrcpyOptions(mode);
+
+    addLog(`scrcpyを起動中 (${mode})...`, 'info');
+    // addLog('オプション: ' + JSON.stringify(options, null, 2), 'info'); // デバッグ用
 
     const result = await window.api.startScrcpy(options);
 
@@ -451,6 +456,7 @@ async function startScrcpy() {
         addLog('起動失敗: ' + result.message, 'error');
     }
 }
+
 
 async function stopScrcpy() {
     addLog('scrcpyを停止中...', 'info');
